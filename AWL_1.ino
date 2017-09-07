@@ -62,11 +62,11 @@ void TempPres(){
         dataString +="TEMPERROR;";    //printataan faili
         return;
       }
-      else{
+      else {
       }
-    else{
-      break;  
     }
+    else {
+      break;  
     }
     
   }
@@ -87,14 +87,13 @@ void TempPres(){
         dataString +="TEMPERROR;";    //printataan faili
         return;
       }
-      else{
+      else {
       }
-    else{
+    }
+    else {
       break;  
     }
     }
-    
-  }
 
   delay(status);
 
@@ -102,7 +101,7 @@ void TempPres(){
   p0 = pressure.sealevel(P, ALTITUDE);
   dataString += p0;
   dataString += ";";
-  return;
+  return(0);
   
   }
 
