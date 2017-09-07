@@ -6,13 +6,13 @@
 
 SFE_BMP180 pressure;      //
 
-#define ALTITUDE 37;     //laita tähän nykyinen korkeus metreissä
+#define ALTITUDE 37     //laita tähän nykyinen korkeus metreissä
 
 String dataString;       //luodaan stringi datalle
 
 File dataFile;
 
-int i = 0;    //käytetään looppaamaan. koitetaan muistaa nollata
+
 
 void setup() {
 
@@ -49,27 +49,60 @@ void Aika(){            //Ottaa RTC:ltä nykyisen ajan muodossa
 }
 
 void TempPres(){
-  tempfail:   //tullaan tähän, jos temp mittaus failaa
   char status;
-  double T,P,P0,a;
+  double T,P,p0,a;
   pressure.begin(); //käynnistää moduulin
   status = pressure.startTemperature();
   /*aloittaa mittauksen ja antaa arvon, minkä mittaus 
    * kestää ms, tai 0, jos ei toimi
    */
-  if (status == 0)    //jos ei toimi, kokeilee uudestaan                
-  {                   //max 3 kertaa
-    for ( i; i <= 2; i++){
-      goto tempfail;   //aloittaa alusta
+   for(int i = 0; i <= 2; i++){ //jos ei toimi, kokeilee uudestaan max 3 kertaa 
+    if (status == 0){                   
+      if(i == 2){
+        dataString +="TEMPERROR;";    //printataan faili
+        return;
+      }
+      else{
+      }
+    else{
+      break;  
+    }
+    }
+    
   }
-      dataString +="TEMPERROR;";    //printataan faili
-      i = 0;   //suht tärkeetä myöhemmin...
-  }
+
+
   delay(status);    //odottaa mittauksen keston ajan
 
   status = pressure.getTemperature(T);
   dataString += T;
   dataString +=";";
+
+  //Sitten alkaa paineen mittaus (pitää olla tempin jälkeen)
+
+  status = pressure.startPressure(3);
+  for(int i = 0; i <= 2; i++){ //jos ei toimi, kokeilee uudestaan max 3 kertaa 
+    if (status == 0){                   
+      if(i == 2){
+        dataString +="TEMPERROR;";    //printataan faili
+        return;
+      }
+      else{
+      }
+    else{
+      break;  
+    }
+    }
+    
+  }
+
+  delay(status);
+
+  status = pressure.getPressure(P,T);
+  p0 = pressure.sealevel(P, ALTITUDE);
+  dataString += p0;
+  dataString += ";";
+  return;
   
   }
 
