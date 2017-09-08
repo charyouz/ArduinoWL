@@ -26,9 +26,9 @@ void loop() {
  String dataString = "";  //tyhjennetään stringi
 
  Aika();
-
+ dataString +=";";
  TempPres();
-
+ dataString += ";";
  dataPrint();
 
  return(0);
@@ -45,6 +45,7 @@ void Aika(){            //Ottaa RTC:ltä nykyisen ajan muodossa
   dataString += RTC.mm;
   dataString +=".";
   dataString += RTC.yyyy;
+
   return(0);
 }
 
@@ -52,17 +53,19 @@ void TempPres(){
   char status;
   double T,P,p0,a;
   pressure.begin(); //käynnistää moduulin
-  status = pressure.startTemperature();
+  
+   for(int i = 0; i <= 2; i++){ //jos ei toimi, kokeilee uudestaan max 3 kertaa
+    status = pressure.startTemperature();
   /*aloittaa mittauksen ja antaa arvon, minkä mittaus 
    * kestää ms, tai 0, jos ei toimi
-   */
-   for(int i = 0; i <= 2; i++){ //jos ei toimi, kokeilee uudestaan max 3 kertaa 
+   */ 
     if (status == 0){                   
       if(i == 2){
         dataString +="TEMPERROR;";    //printataan faili
         return;
       }
       else {
+      delay(5);
       }
     }
     else {
@@ -80,11 +83,11 @@ void TempPres(){
 
   //Sitten alkaa paineen mittaus (pitää olla tempin jälkeen)
 
-  status = pressure.startPressure(3);
-  for(int i = 0; i <= 2; i++){ //jos ei toimi, kokeilee uudestaan max 3 kertaa 
+  for(int i = 0; i <= 2; i++){ //jos ei toimi, kokeilee uudestaan max 3 kertaa
+    status = pressure.startPressure(3); 
     if (status == 0){                   
       if(i == 2){
-        dataString +="TEMPERROR;";    //printataan faili
+        dataString +="PRESERROR;";    //printataan faili
         return;
       }
       else {
@@ -100,7 +103,7 @@ void TempPres(){
   status = pressure.getPressure(P,T);
   p0 = pressure.sealevel(P, ALTITUDE);
   dataString += p0;
-  dataString += ";";
+
   return(0);
   
   }
