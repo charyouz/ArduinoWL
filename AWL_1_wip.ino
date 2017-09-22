@@ -4,6 +4,11 @@
 #include <SFE_BMP180.h>   //paine ja lämpötila anturin lib
 #include <Wire.h>         //sama
 
+#include <DHT.h>          //kosteusanturi
+#define DHTPIN 2          //missä pinnissä anturi on
+#define DHTTYPE DHT22     //definataan mitä piiriä käytetään
+DHT dht(DHTPIN, DHTTYPE); //laitetaan toimimaan
+
 SFE_BMP180 pressure;      //
 
 #define ALTITUDE 37     //laita tähän nykyinen korkeus metreissä
@@ -16,6 +21,7 @@ File dataFile;
 
 void setup() {
 
+Serial.begin(9600);    //baudrate
 
 }
 
@@ -29,6 +35,7 @@ void loop() {
  dataString +=";";
  TempPres();
  dataString += ";";
+ Humidity();
  dataPrint();
 
  return(0);
@@ -108,6 +115,13 @@ void TempPres(){
   
   }
 
+void Humidity(){
+  float h = dht.readHumidity();   //lukee kosteuden
+  dataString += h;     //tarvitseeko kokeilla uudestaan, jos tulee nan?
+  return;
+    
+}
+
 
 void dataPrint(){ //printtaa SD kortille dataStringin
    dataFile = SD.open("test.txt", FILE_WRITE);  
@@ -116,3 +130,35 @@ void dataPrint(){ //printtaa SD kortille dataStringin
    return(0);
 }
 
+int Handshake(){   //tarkistaa, että BT yhteys on ok ja palauttaa 1, jos on
+  char rec = 0;
+  char ykok = "ykok";
+  for(int k = 0; k <= 2; k++){    //vertaa vastausta kolmesti
+    for(int i = 0; i <= 2; i++){    //huutaa kolmesti
+     Serial.print("yk");
+     for(int j = 0; j <= 4; j++){   //kuuntelee viidesti
+        if(Serial.available() == 0){
+         delay(20);
+       }
+        else{
+         i = 3;
+         j = 5;
+       }
+     }
+   }
+   if(Serial.available() == 0){
+     return(0);
+   }
+   rec = Serial.read();
+   if(rec == ykok){
+     k = 3; 
+   }
+  }
+  Serial.print("ykok");    //jos pääsee tähän, yhteys on kuosissa
+  return(1);
+  
+}
+
+void SendData(){    //lähettää tallennetun ei-lähetetyn datan
+  
+}
