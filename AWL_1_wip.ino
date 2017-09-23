@@ -17,7 +17,7 @@ String dataString;       //luodaan stringi datalle
 
 File dataFile;
 
-
+uint32_t location = 0;   //int datan paikalle, mitä ei olla lähetetty
 
 void setup() {
 
@@ -37,6 +37,12 @@ void loop() {
  dataString += ";";
  Humidity();
  dataPrint();
+
+ //Datanlähetys:
+ Handshake();
+ if (Handshake() == 1){
+  SendLoop();
+ }
 
  return(0);
 
@@ -159,6 +165,39 @@ int Handshake(){   //tarkistaa, että BT yhteys on ok ja palauttaa 1, jos on
   
 }
 
-void SendData(){    //lähettää tallennetun ei-lähetetyn datan
+int SendLoop(){
+  dataFile = SD.open("test.txt");
+  dataFile.seek(location);
+  while (dataFile.peek() != -1){
+    SendData();
+    if (SendData() == 0){
+      dataFile.close();
+      return(0);
+    }
+  }
+  dataFile.close();
+  return(1);
+}
   
+
+int SendData(){    //lähettää seuraavan rivin tallennettua ei-lähetettyä dataa
+  char rec = 0;    //jos ok, niin palauttaa 1 ja siirtää lukukohdan seuraavalle riville
+  char ok = "ok";
+  //dataFile = SD.open("test.txt");   avattu jo SendLoopissa
+  dataFile.seek(location);
+  while (dataFile.peek() != "/n"){
+    Serial.write(dataFile.read());
+  }
+  Serial.write("/n");
+  while (Serial.available() == 0){
+  }
+  delay(20);
+  rec = Serial.read();
+  if (rec == ok){
+  location = (dataFile.position() + 1); //+1, koska ei missään vaiheessa lukenut rivinvaihtoa
+  //dataFile.close();
+  return(1);
+  }
+  //dataFile.close(); sulkeutuu SendLoopissa
+  return(0);
 }
