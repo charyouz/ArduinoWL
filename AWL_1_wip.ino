@@ -44,7 +44,7 @@ void loop() {
   SendLoop();
  }
 
- return(0);
+ return;
 
 }
 
@@ -59,7 +59,7 @@ void Aika(){            //Ottaa RTC:ltä nykyisen ajan muodossa
   dataString +=".";
   dataString += RTC.yyyy;
 
-  return(0);
+  return;
 }
 
 void TempPres(){
@@ -117,7 +117,7 @@ void TempPres(){
   p0 = pressure.sealevel(P, ALTITUDE);
   dataString += p0;
 
-  return(0);
+  return;
   
   }
 
@@ -133,7 +133,7 @@ void dataPrint(){ //printtaa SD kortille dataStringin
    dataFile = SD.open("test.txt", FILE_WRITE);  
    dataFile.println(dataString);
    dataFile.close();
-   return(0);
+   return;
 }
 
 int Handshake(){   //tarkistaa, että BT yhteys on ok ja palauttaa 1, jos on
