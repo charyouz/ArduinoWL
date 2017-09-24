@@ -137,8 +137,8 @@ void dataPrint(){ //printtaa SD kortille dataStringin
 }
 
 int Handshake(){   //tarkistaa, että BT yhteys on ok ja palauttaa 1, jos on
-  char rec = 0;
-  char ykok = "ykok";
+  String rec = "";
+  String ykok = "ykok";
   for(int k = 0; k <= 2; k++){    //vertaa vastausta kolmesti
     for(int i = 0; i <= 2; i++){    //huutaa kolmesti
      Serial.print("yk");
@@ -181,8 +181,8 @@ int SendLoop(){
   
 
 int SendData(){    //lähettää seuraavan rivin tallennettua ei-lähetettyä dataa
-  char rec = 0;    //jos ok, niin palauttaa 1 ja siirtää lukukohdan seuraavalle riville
-  char ok = "ok";
+  String rec = "";    //jos ok, niin palauttaa 1 ja siirtää lukukohdan seuraavalle riville
+  String ok = "ok";
   //dataFile = SD.open("test.txt");   avattu jo SendLoopissa
   dataFile.seek(location);
   while (dataFile.peek() != "/n"){
