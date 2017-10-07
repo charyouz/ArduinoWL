@@ -9,6 +9,8 @@
 #define DHTTYPE DHT22     //definataan mitä piiriä käytetään
 DHT dht(DHTPIN, DHTTYPE); //laitetaan toimimaan
 
+#include <SoftwareSerial.h>
+
 SFE_BMP180 pressure;      //
 
 #define ALTITUDE 37     //laita tähän nykyinen korkeus metreissä
@@ -19,6 +21,12 @@ File dataFile;
 
 uint32_t location = 0;   //int datan paikalle, mitä ei olla lähetetty
 
+/* //RTC pinnit
+const byte rxPin = A4;
+const byte txPin = A5;
+
+SoftwareSerial RTCSerial (rxPin, txPin);
+*/
 void setup() {
 
 Serial.begin(9600);    //baudrate
@@ -29,15 +37,19 @@ Serial.begin(9600);    //baudrate
 void loop() {
  
  
- String dataString = "";  //tyhjennetään stringi
-
+ String dataString = "/n";  //tyhjennetään stringi ja luodaan uusi rivi
+ 
+ dataFile = SD.open("test.txt", FILE_WRITE);
  Aika();
  dataString +=";";
- TempPres();
- dataString += ";";
  Humidity();
+ dataString += ";";
  dataPrint();
+ TempPres();    //printtaa sisäisesti, koska ei anna longia lisätä stringiin
+ 
+ dataFile.close();
 
+ 
  //Datanlähetys:
  Handshake();
  if (Handshake() == 1){
@@ -91,8 +103,9 @@ void TempPres(){
   delay(status);    //odottaa mittauksen keston ajan
 
   status = pressure.getTemperature(T);
-  dataString += T;
-  dataString +=";";
+   dataFile.print(T);
+   dataFile.print(";");
+   dataFile.flush();
 
   //Sitten alkaa paineen mittaus (pitää olla tempin jälkeen)
 
@@ -114,8 +127,10 @@ void TempPres(){
   delay(status);
 
   status = pressure.getPressure(P,T);
-  p0 = pressure.sealevel(P, ALTITUDE);
-  dataString += p0;
+  p0 = pressure.sealevel(P, ALTITUDE); 
+   dataFile.print(p0);
+   //dataFile.print(";");
+   dataFile.flush();
 
   return;
   
@@ -129,10 +144,9 @@ void Humidity(){
 }
 
 
-void dataPrint(){ //printtaa SD kortille dataStringin
-   dataFile = SD.open("test.txt", FILE_WRITE);  
-   dataFile.println(dataString);
-   dataFile.close();
+void dataPrint(){ //printtaa SD kortille dataStringin  
+   dataFile.print(dataString);
+   dataFile.flush();
    return;
 }
 
