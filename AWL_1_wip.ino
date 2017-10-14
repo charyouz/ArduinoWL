@@ -37,15 +37,16 @@ Serial.begin(9600);    //baudrate
 void loop() {
  
  
- String dataString = "/n";  //tyhjennetään stringi ja luodaan uusi rivi
+ String dataString = "";  //tyhjennetään stringi
  
  dataFile = SD.open("test.txt", FILE_WRITE);
  Aika();
- dataString +=";";
- Humidity();
- dataString += ";";
- dataPrint();
- TempPres();    //printtaa sisäisesti, koska ei anna longia lisätä stringiin
+ dataFile.print(dataString);
+ dataFile.print(";");
+ Humidity();      //tallentaa sisäisesti SD kortille
+ dataFile.print(";");
+ TempPres();    //tallentaa sisäisesti SD kortille
+ dataFile.println();
  
  dataFile.close();
 
@@ -103,9 +104,6 @@ void TempPres(){
   delay(status);    //odottaa mittauksen keston ajan
 
   status = pressure.getTemperature(T);
-   dataFile.print(T);
-   dataFile.print(";");
-   dataFile.flush();
 
   //Sitten alkaa paineen mittaus (pitää olla tempin jälkeen)
 
@@ -128,9 +126,12 @@ void TempPres(){
 
   status = pressure.getPressure(P,T);
   p0 = pressure.sealevel(P, ALTITUDE); 
+
+  //tallentaa lämpötilan ja paineen
+   dataFile.print(T);
+   dataFile.print(";");
    dataFile.print(p0);
-   //dataFile.print(";");
-   dataFile.flush();
+   
 
   return;
   
@@ -138,17 +139,12 @@ void TempPres(){
 
 void Humidity(){
   float h = dht.readHumidity();   //lukee kosteuden
-  dataString += h;     //tarvitseeko kokeilla uudestaan, jos tulee nan?
+  //dataString += h;     //tarvitseeko kokeilla uudestaan, jos tulee nan?
+  dataFile.print(h);
   return;
     
 }
 
-
-void dataPrint(){ //printtaa SD kortille dataStringin  
-   dataFile.print(dataString);
-   dataFile.flush();
-   return;
-}
 
 int Handshake(){   //tarkistaa, että BT yhteys on ok ja palauttaa 1, jos on
   String rec = "";
