@@ -9,6 +9,8 @@
 #define DHTTYPE DHT22     //definataan mitä piiriä käytetään
 DHT dht(DHTPIN, DHTTYPE); //laitetaan toimimaan
 
+#include <SoftwareSerial.h>
+
 SFE_BMP180 pressure;      //
 
 #define ALTITUDE 37     //laita tähän nykyinen korkeus metreissä
@@ -19,6 +21,12 @@ File dataFile;
 
 uint32_t location = 0;   //int datan paikalle, mitä ei olla lähetetty
 
+/* //RTC pinnit
+const byte rxPin = A4;
+const byte txPin = A5;
+
+SoftwareSerial RTCSerial (rxPin, txPin);
+*/
 void setup() {
 
 Serial.begin(9600);    //baudrate
@@ -30,14 +38,19 @@ void loop() {
  
  
  String dataString = "";  //tyhjennetään stringi
-
+ 
+ dataFile = SD.open("test.txt", FILE_WRITE);
  Aika();
- dataString +=";";
- TempPres();
- dataString += ";";
- Humidity();
- dataPrint();
+ dataFile.print(dataString);
+ dataFile.print(";");
+ Humidity();      //tallentaa sisäisesti SD kortille
+ dataFile.print(";");
+ TempPres();    //tallentaa sisäisesti SD kortille
+ dataFile.println();
+ 
+ dataFile.close();
 
+ 
  //Datanlähetys:
  Handshake();
  if (Handshake() == 1){
@@ -91,8 +104,6 @@ void TempPres(){
   delay(status);    //odottaa mittauksen keston ajan
 
   status = pressure.getTemperature(T);
-  dataString += T;
-  dataString +=";";
 
   //Sitten alkaa paineen mittaus (pitää olla tempin jälkeen)
 
@@ -114,8 +125,13 @@ void TempPres(){
   delay(status);
 
   status = pressure.getPressure(P,T);
-  p0 = pressure.sealevel(P, ALTITUDE);
-  dataString += p0;
+  p0 = pressure.sealevel(P, ALTITUDE); 
+
+  //tallentaa lämpötilan ja paineen
+   dataFile.print(T);
+   dataFile.print(";");
+   dataFile.print(p0);
+   
 
   return;
   
@@ -123,18 +139,12 @@ void TempPres(){
 
 void Humidity(){
   float h = dht.readHumidity();   //lukee kosteuden
-  dataString += h;     //tarvitseeko kokeilla uudestaan, jos tulee nan?
+  //dataString += h;     //tarvitseeko kokeilla uudestaan, jos tulee nan?
+  dataFile.print(h);
   return;
     
 }
 
-
-void dataPrint(){ //printtaa SD kortille dataStringin
-   dataFile = SD.open("test.txt", FILE_WRITE);  
-   dataFile.println(dataString);
-   dataFile.close();
-   return;
-}
 
 int Handshake(){   //tarkistaa, että BT yhteys on ok ja palauttaa 1, jos on
   String rec = "";
