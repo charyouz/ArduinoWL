@@ -134,7 +134,7 @@ void loop(){
   
   setalarm();
   
-  while (RTC.checkAlarm2() != true){
+  while (RTC.checkAlarm1() != true){
   }
 
 
@@ -142,7 +142,7 @@ void loop(){
 
 void setalarm(){
 
-  int Min;
+  int Min,Hour;
 
   RTC.readTime();
   Min = RTC.m;
@@ -150,21 +150,21 @@ void setalarm(){
   Min = Min + 30;
   if (Min >= 60){
     Min = Min - 60;
-   // Hour = Hour + 1;
+    Hour = Hour + 1;
   }
-  //if (Hour >= 24){
-   // Hour = Hour - 24;  
+  if (Hour >= 24){
+    Hour = Hour - 24;  
     
-  //}
+  }
  
   RTC.m = Min;
-  //RTC.h = Hour;
+  RTC.h = Hour;
 
-  RTC.writeAlarm2(DS3231_ALM_M);
+  RTC.writeAlarm1(DS3231_ALM_HMS);
 
   Serial.print("Alarm set to ");
-  RTC.readAlarm2();
-  //Serial.print(RTC.h);
+  RTC.readAlarm1();
+  Serial.print(RTC.h);
   Serial.print(":");
   Serial.println(RTC.m);
   
