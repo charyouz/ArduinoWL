@@ -1,0 +1,174 @@
+#include <MD_DS3231.h>
+#include <SD.h>
+#include <SFE_BMP180.h>
+#include <Wire.h>
+
+SFE_BMP180 pressure;
+
+File myFile;
+
+#define ALTITUDE 34
+
+int i=0;
+
+int Alarm;
+
+void setup (){
+
+  Serial.begin(9600);
+  delay(5000);
+  Serial.println("Starting...");
+  
+  pinMode(2, INPUT);
+
+  if (pressure.begin())
+    Serial.println("Pressure sensor init success!");
+  else {
+    Serial.println("Pressure sensor init failed");
+    while(1);
+  }
+  Serial.print("Initializing SD card... ");
+  pinMode(10, OUTPUT);
+
+  if (!SD.begin(10)){
+    Serial.println("initialization failed!!");
+    return;
+  }
+ /* 
+  RTC.h = 20;
+  RTC.m = 4;
+  RTC.s = 30;
+  RTC.writeTime();
+  */
+
+  Serial.println("done!");
+
+}
+
+void loop(){
+  char status;
+  double T,P,p0,a;
+
+  Serial.println();
+  Serial.println("Measuring...");
+
+  RTC.readTime();
+
+  status = pressure.startTemperature();
+  if (status != 0)
+  {
+    delay(status);
+
+    status = pressure.getTemperature(T);
+    if (status != 0)
+    {
+      Serial.print("Temperature: ");
+      Serial.print(T,2);
+      Serial.println("C");
+
+      status = pressure.startPressure(3);
+      if (status != 0)
+      {
+
+        delay(status);
+
+        status = pressure.getPressure(P,T);
+
+        if (status != 0)
+        {
+          p0 = pressure.sealevel(P,ALTITUDE);
+          Serial.print("Pressure: ");
+          Serial.print(p0,2);
+          Serial.println(" mb");
+        }
+      }
+    }
+  }
+
+ // i++; 
+
+  myFile = SD.open("data.txt", FILE_WRITE);
+  if (myFile){
+    Serial.print("Writing data to SD card... ");
+  //  myFile.print(i);    //printtaa mittauskerran
+  //  myFile.print(";");
+
+    myFile.print(RTC.h, DEC);
+    myFile.print(":");
+    myFile.print(RTC.m, DEC);
+    myFile.print(":");
+    myFile.print(RTC.s, DEC);
+    myFile.print(";");
+    myFile.print(RTC.dd);
+    myFile.print(":");
+    myFile.print(RTC.mm);
+    myFile.print(".");
+    myFile.print(RTC.yyyy);
+    myFile.print(";");
+
+    myFile.print(T);
+    myFile.print(";");
+    myFile.print(p0);
+    myFile.println();
+    myFile.close();
+
+    Serial.println("done!");
+    
+    Serial.print("Measured at ");
+   // Serial.print("Measured ");
+   // Serial.print(i);
+   // Serial.print(" times at ");
+    Serial.print(RTC.h);
+    Serial.print(":");
+    Serial.print(RTC.m);
+    Serial.println(" o'clock");
+  }
+  else{
+    Serial.println("Failed writing to file!");
+  }
+
+  //Serial.println("Waiting 2 seconds");
+  //delay(2000);
+  
+  RTC.checkAlarm1();
+  
+  setalarm();
+  
+  while (RTC.checkAlarm2() != true){
+  }
+
+
+}
+
+void setalarm(){
+
+  int Min;
+
+  RTC.readTime();
+  Min = RTC.m;
+  //Hour = RTC.h;
+  Min = Min + 30;
+  if (Min >= 60){
+    Min = Min - 60;
+   // Hour = Hour + 1;
+  }
+  //if (Hour >= 24){
+   // Hour = Hour - 24;  
+    
+  //}
+ 
+  RTC.m = Min;
+  //RTC.h = Hour;
+
+  RTC.writeAlarm2(DS3231_ALM_M);
+
+  Serial.print("Alarm set to ");
+  RTC.readAlarm2();
+  //Serial.print(RTC.h);
+  Serial.print(":");
+  Serial.println(RTC.m);
+  
+
+
+}
+
