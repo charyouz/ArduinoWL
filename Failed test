@@ -1,174 +1,71 @@
-#include <MD_DS3231.h>
-#include <SD.h>
-#include <SFE_BMP180.h>
 #include <Wire.h>
+#include <SD.h>
 
-SFE_BMP180 pressure;
+File rdFile;
+File opnNext;
+String topFile;
 
-File myFile;
+String IncData;
+char CharData[50];
 
-#define ALTITUDE 34
-
-int i=0;
-
-int Alarm;
-
-void setup (){
-
+void setup(){
+ 
   Serial.begin(9600);
-  delay(5000);
+  delay(3000);
   Serial.println("Starting...");
-  
-  pinMode(2, INPUT);
-
-  if (pressure.begin())
-    Serial.println("Pressure sensor init success!");
-  else {
-    Serial.println("Pressure sensor init failed");
+  Serial.print("Initializing SD card...");
+  pinMode(10, OUTPUT);
+  if (!SD.begin(10)){
+    Serial.println("initialization failed!");
+    Serial.println("Stopping program.");
     while(1);
   }
-  Serial.print("Initializing SD card... ");
-  pinMode(10, OUTPUT);
-
-  if (!SD.begin(10)){
-    Serial.println("initialization failed!!");
-    return;
-  }
- /* 
-  RTC.h = 20;
-  RTC.m = 4;
-  RTC.s = 30;
-  RTC.writeTime();
-  */
-
   Serial.println("done!");
-
+  Serial.println("Waiting for input");
+  
 }
 
 void loop(){
-  char status;
-  double T,P,p0,a;
-
-  Serial.println();
-  Serial.println("Measuring...");
-
-  RTC.readTime();
-
-  status = pressure.startTemperature();
-  if (status != 0)
-  {
-    delay(status);
-
-    status = pressure.getTemperature(T);
-    if (status != 0)
-    {
-      Serial.print("Temperature: ");
-      Serial.print(T,2);
-      Serial.println("C");
-
-      status = pressure.startPressure(3);
-      if (status != 0)
-      {
-
-        delay(status);
-
-        status = pressure.getPressure(P,T);
-
-        if (status != 0)
-        {
-          p0 = pressure.sealevel(P,ALTITUDE);
-          Serial.print("Pressure: ");
-          Serial.print(p0,2);
-          Serial.println(" mb");
+ 
+  while (Serial.available() == 0){
+  }
+  delay(300);
+  //Serial.println(Serial.available());
+  int j = 0;
+  for (int a = Serial.available(); a != 0; a--){ 
+   CharData[j] = Serial.read();
+   //Serial.print(j);
+   //Serial.println(CharData[j]);
+   j++;
+   //Serial.println("for done");
+  }
+  /*
+  Serial.println(Serial.available());
+  Serial.println("Done!");
+  Serial.println(Serial.available());
+  */
+  int q = 0;  //keroo kuinka monta kertaa wlempi while mennyt läpi
+  switch (CharData[0]){
+    case 'd':
+      Serial.println("IT WORKS!");
+      while (true){
+      rdFile = SD.open("/");
+      opnNext = rdFile.openNextFile();
+      if (! opnNext){
+        Serial.println("All files listed!!!");
+        opnNext.close();
+        break;
+      }
+      if (!opnNext.isDirectory()){
+        Serial.print(opnNext.name());
+        Serial.print("\t");
+        Serial.println(opnNext.size(), DEC);
+        opnNext.close();
         }
       }
-    }
+        break;
+    default:
+      Serial.print("Failed");
+      break;
   }
-
- // i++; 
-
-  myFile = SD.open("data.txt", FILE_WRITE);
-  if (myFile){
-    Serial.print("Writing data to SD card... ");
-  //  myFile.print(i);    //printtaa mittauskerran
-  //  myFile.print(";");
-
-    myFile.print(RTC.h, DEC);
-    myFile.print(":");
-    myFile.print(RTC.m, DEC);
-    myFile.print(":");
-    myFile.print(RTC.s, DEC);
-    myFile.print(";");
-    myFile.print(RTC.dd);
-    myFile.print(":");
-    myFile.print(RTC.mm);
-    myFile.print(".");
-    myFile.print(RTC.yyyy);
-    myFile.print(";");
-
-    myFile.print(T);
-    myFile.print(";");
-    myFile.print(p0);
-    myFile.println();
-    myFile.close();
-
-    Serial.println("done!");
-    
-    Serial.print("Measured at ");
-   // Serial.print("Measured ");
-   // Serial.print(i);
-   // Serial.print(" times at ");
-    Serial.print(RTC.h);
-    Serial.print(":");
-    Serial.print(RTC.m);
-    Serial.println(" o'clock");
-  }
-  else{
-    Serial.println("Failed writing to file!");
-  }
-
-  //Serial.println("Waiting 2 seconds");
-  //delay(2000);
-  
-  RTC.checkAlarm1();
-  
-  setalarm();
-  
-  while (RTC.checkAlarm1() != true){
-  }
-
-
 }
-
-void setalarm(){
-
-  int Min,Hour;
-
-  RTC.readTime();
-  Min = RTC.m;
-  //Hour = RTC.h;
-  Min = Min + 30;
-  if (Min >= 60){
-    Min = Min - 60;
-    Hour = Hour + 1;
-  }
-  if (Hour >= 24){
-    Hour = Hour - 24;  
-    
-  }
- 
-  RTC.m = Min;
-  RTC.h = Hour;
-
-  RTC.writeAlarm1(DS3231_ALM_HMS);
-
-  Serial.print("Alarm set to ");
-  RTC.readAlarm1();
-  Serial.print(RTC.h);
-  Serial.print(":");
-  Serial.println(RTC.m);
-  
-
-
-}
-
