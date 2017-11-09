@@ -3,13 +3,13 @@
 
 File rdFile;
 File opnNext;
-String topFile;
+char FileName[10];
 
 String IncData;
-char CharData[50];
+char CharData[10];
 
 void setup(){
- 
+
   Serial.begin(9600);
   delay(3000);
   Serial.println("Starting...");
@@ -22,34 +22,38 @@ void setup(){
   }
   Serial.println("done!");
   Serial.println("Waiting for input");
-  
+
 }
 
 void loop(){
- 
+
+  //FileName= "";
+  
+  Serial.println("Start of loop");
+
   while (Serial.available() == 0){
   }
   delay(300);
   //Serial.println(Serial.available());
   int j = 0;
   for (int a = Serial.available(); a != 0; a--){ 
-   CharData[j] = Serial.read();
-   //Serial.print(j);
-   //Serial.println(CharData[j]);
-   j++;
-   //Serial.println("for done");
+    CharData[j] = Serial.read();
+    //Serial.print(j);
+    //Serial.println(CharData[j]);
+    j++;
+    //Serial.println("for done");
   }
   /*
   Serial.println(Serial.available());
-  Serial.println("Done!");
-  Serial.println(Serial.available());
-  */
-  int q = 0;  //keroo kuinka monta kertaa wlempi while mennyt läpi
+   Serial.println("Done!");
+   Serial.println(Serial.available());
+   */
+  //int q = 0;  //keroo kuinka monta kertaa wlempi while mennyt läpi
   switch (CharData[0]){
-    case 'd':
-      Serial.println("IT WORKS!");
-      while (true){
-      rdFile = SD.open("/");
+  case 'd': //listaa kaikki filet
+    //Serial.println("IT WORKS!");
+    rdFile = SD.open("/");
+    while (true){
       opnNext = rdFile.openNextFile();
       if (! opnNext){
         Serial.println("All files listed!!!");
@@ -61,11 +65,33 @@ void loop(){
         Serial.print("\t");
         Serial.println(opnNext.size(), DEC);
         opnNext.close();
-        }
       }
-        break;
-    default:
-      Serial.print("Failed");
-      break;
+    }
+    break;
+
+  case 's':  //lähettää halutun filen datan
+    getFileName();  
+    if (SD.exists(FileName)){
+      rdFile = SD.open(FileName);
+      while (rdFile.peek() != -1){
+        Serial.write(rdFile.read());
+      }
+      rdFile.close();
+      Serial.println();
+      }
+    else{
+      Serial.println("File does not exist!");
+    }
+    break;
+  default:
+    Serial.println("Failed");
+    break;
+    }
+
   }
+
+
+void getFileName(){
+  snprintf(FileName, sizeof(FileName), "%c%c%c%c.txt", CharData[1], CharData[2], CharData[3], CharData[4]);
+  Serial.println(FileName);
 }
