@@ -1,203 +1,289 @@
-#include <MD_DS3231.h>    //RTC lib
-#include <SD.h>           //SD kortin lib
-#include <SPI.h>
-#include <SFE_BMP180.h>   //paine ja lämpötila anturin lib
-#include <Wire.h>         //sama
+#include <MD_DS3231.h>
+#include <SD.h>
+#include <SFE_BMP180.h>
+#include <Wire.h>
+#include <DHT.h>
+#include <Adafruit_Sensor.h>
 
-#include <DHT.h>          //kosteusanturi
-#define DHTPIN 2          //missä pinnissä anturi on
-#define DHTTYPE DHT22     //definataan mitä piiriä käytetään
-DHT dht(DHTPIN, DHTTYPE); //laitetaan toimimaan
+#define DHTPIN 4
+#define DHTTYPE 22
 
-SFE_BMP180 pressure;      //
+DHT dht(DHTPIN, DHTTYPE);
 
-#define ALTITUDE 37     //laita tähän nykyinen korkeus metreissä
+SFE_BMP180 pressure;  //paineanturi
 
-String dataString;       //luodaan stringi datalle
+File myFile; //SD kortti, siihen kirjoittaminen yms.
+File rdFile;
+File opnNext;
+char FileName[10];  //Serialista löytyvän filen nimi
+char CharData[10];  //SErialista tulevan datan char
 
-File dataFile;
+char FileNameArray[10]; //tiedoston nimi SD korttiin
 
-uint32_t location = 0;   //int datan paikalle, mitä ei olla lähetetty
+#define ALTITUDE 34
 
-void setup() {
+//int i=0;
 
-Serial.begin(9600);    //baudrate
+int Alarm;
+
+void setup (){
+  
+  Serial.begin(9600);
+  delay(2000);
+  //Serial.println("S");
+  
+  pinMode(2, INPUT);
+
+  if (pressure.begin())
+    Serial.println("P");
+  else {
+    Serial.println("PFug");
+    while(1);
+  }
+ // Serial.print("SD");
+  pinMode(10, OUTPUT);
+
+  if (!SD.begin(10)){
+    Serial.println("Fug");
+  }
+  else{
+//  Serial.println("done!");
+  }
+  
+//  Serial.print("H");
+  
+  dht.begin();
+  
+  Serial.println("d");
+  
+ /* 
+  RTC.h = 20; //uncomment to set time if needed
+  RTC.m = 4;
+  RTC.s = 30;
+  RTC.dd = 16;
+  RTC.mm = 10;
+  RTC.yyyy = 2017;
+  RTC.writeTime();
+  */
+  //reset alarms:
+  RTC.checkAlarm1();
+  RTC.checkAlarm2();
 
 }
 
-
-void loop() {
- 
- 
- String dataString = "";  //tyhjennetään stringi
-
- Aika();
- dataString +=";";
- TempPres();
- dataString += ";";
- Humidity();
- dataPrint();
-
- //Datanlähetys:
- Handshake();
- if (Handshake() == 1){
-  SendLoop();
- }
-
- return;
-
-}
-
-void Aika(){            //Ottaa RTC:ltä nykyisen ajan muodossa
-  dataString += RTC.h;   // hh:mm;dd.mm.yyyy ja
-  dataString +=":";      //lisää dataStringiin
-  dataString += RTC.m;
-  dataString +=";";
-  dataString += RTC.dd;
-  dataString +=".";
-  dataString += RTC.mm;
-  dataString +=".";
-  dataString += RTC.yyyy;
-
-  return;
-}
-
-void TempPres(){
+void loop(){
   char status;
   double T,P,p0,a;
-  pressure.begin(); //käynnistää moduulin
   
-   for(int i = 0; i <= 2; i++){ //jos ei toimi, kokeilee uudestaan max 3 kertaa
-    status = pressure.startTemperature();
-  /*aloittaa mittauksen ja antaa arvon, minkä mittaus 
-   * kestää ms, tai 0, jos ei toimi
-   */ 
-    if (status == 0){                   
-      if(i == 2){
-        dataString +="TEMPERROR;";    //printataan faili
-        return;
-      }
-      else {
-      delay(5);
+
+  Serial.println();
+  Serial.println("Meas");
+
+  RTC.readTime();
+
+  float h = dht.readHumidity();
+  
+//  Serial.print("Humidity: ");
+  Serial.println(h);
+
+  status = pressure.startTemperature();
+  if (status != 0)
+  {
+    delay(status);
+
+    status = pressure.getTemperature(T);
+    if (status != 0)
+    {
+     // Serial.print("Temperature: ");
+      Serial.print(T,2);
+      //Serial.println("C");
+      
+      status = pressure.startPressure(3);
+      if (status != 0)
+      {
+
+        delay(status);
+
+        status = pressure.getPressure(P,T);
+
+        if (status != 0)
+        {
+          p0 = pressure.sealevel(P,ALTITUDE);
+     //     Serial.print("Pressure: ");
+          Serial.print(p0,2);
+     //     Serial.println(" mb");
+         
+        }
       }
     }
-    else {
-      break;  
-    }
+  }
+
+ // i++; 
+ 
+ snprintf(FileNameArray, sizeof(FileNameArray), "%02d%02d.txt", RTC.mm, RTC.dd); //tiedoston nimi tulee muotoon mmdd.txt
+
+  myFile = SD.open(FileNameArray, FILE_WRITE);
+  if (myFile){
+    Serial.print("Writing");
+  //  myFile.print(i);    //printtaa mittauskerran
+  //  myFile.print(";");
+
+    myFile.print(RTC.h, DEC);
+    myFile.print(":");
+    myFile.print(RTC.m, DEC);
     
+    myFile.print(":");
+    myFile.print(RTC.s, DEC);
+    myFile.print(";");
+    myFile.print(RTC.dd);
+    myFile.print(".");
+    myFile.print(RTC.mm);
+    myFile.print(".");
+    myFile.print(RTC.yyyy);
+    myFile.print(";");
+
+    myFile.print(T);
+    myFile.print(";");
+    myFile.print(p0);
+    myFile.print(";");
+    myFile.print(h);
+    myFile.println();
+    myFile.close();
+
+    Serial.println("d");
+    
+   // Serial.print("Measured at ");
+   // Serial.print("Measured ");
+   // Serial.print(i);
+   // Serial.print(" times at ");
+  //  Serial.print(RTC.h);
+  //  Serial.print(":");
+  //  Serial.print(RTC.m);
+  //  Serial.print(" o'clock ");
+  //  Serial.print(RTC.dd);
+  //  Serial.print(".");
+  //  Serial.print(RTC.mm);
+  //  Serial.print(".");
+  //  Serial.println(RTC.yyyy);
+  }
+  else{
+    Serial.println("FWrit");
+  }
+
+  //Serial.println("Waiting 2 seconds");
+  //delay(2000);
+  
+  RTC.checkAlarm1();
+  
+  setalarm();
+  
+  while (RTC.checkAlarm2() != true){
+    SerialData();
   }
 
 
-  delay(status);    //odottaa mittauksen keston ajan
+}
 
-  status = pressure.getTemperature(T);
-  dataString += T;
-  dataString +=";";
+void setalarm(){
 
-  //Sitten alkaa paineen mittaus (pitää olla tempin jälkeen)
+  int Min;
 
-  for(int i = 0; i <= 2; i++){ //jos ei toimi, kokeilee uudestaan max 3 kertaa
-    status = pressure.startPressure(3); 
-    if (status == 0){                   
-      if(i == 2){
-        dataString +="PRESERROR;";    //printataan faili
-        return;
-      }
-      else {
-      }
-    }
-    else {
-      break;  
-    }
-    }
-
-  delay(status);
-
-  status = pressure.getPressure(P,T);
-  p0 = pressure.sealevel(P, ALTITUDE);
-  dataString += p0;
-
-  return;
-  
+  RTC.readTime();
+  Min = RTC.m;
+  //Hour = RTC.h;
+  Min = Min + 30;
+  if (Min >= 60){
+    Min = Min - 60;
+   // Hour = Hour + 1;
   }
-
-void Humidity(){
-  float h = dht.readHumidity();   //lukee kosteuden
-  dataString += h;     //tarvitseeko kokeilla uudestaan, jos tulee nan?
-  return;
+  //if (Hour >= 24){
+   // Hour = Hour - 24;  
     
+  //}
+ 
+  RTC.m = Min;
+  //RTC.h = Hour;
+
+  RTC.writeAlarm2(DS3231_ALM_M);
+
+//  Serial.print("Alarm set to ");
+  RTC.readAlarm2();
+  //Serial.print(RTC.h);
+ // Serial.print(":");
+  Serial.println(RTC.m);
+  
+
+
 }
 
-
-void dataPrint(){ //printtaa SD kortille dataStringin
-   dataFile = SD.open("test.txt", FILE_WRITE);  
-   dataFile.println(dataString);
-   dataFile.close();
-   return;
-}
-
-int Handshake(){   //tarkistaa, että BT yhteys on ok ja palauttaa 1, jos on
-  String rec = "";
-  String ykok = "ykok";
-  for(int k = 0; k <= 2; k++){    //vertaa vastausta kolmesti
-    for(int i = 0; i <= 2; i++){    //huutaa kolmesti
-     Serial.print("yk");
-     for(int j = 0; j <= 4; j++){   //kuuntelee viidesti
-        if(Serial.available() == 0){
-         delay(20);
+void SerialData(){
+  if (Serial.available() != 0){
+    delay(300);
+    int j = 0;
+    for (int a = Serial.available(); a != 0; a--){
+     CharData[j] = Serial.read();
+     j++;
+    } 
+   // Serial.println("Serial read");
+    //Orders received in format XYYYY
+    //where X is order and YYYY is filename without ending
+    
+    switch (CharData[0]){
+     case 'l': //lists all files on SD-card  
+       rdFile = SD.open("/");
+       rdFile.rewindDirectory();
+       while(true){
+         opnNext = rdFile.openNextFile();
+         if (! opnNext){
+           Serial.println("d");
+           opnNext.close();
+           break;
+         }
+         if (!opnNext.isDirectory()){
+           Serial.println(opnNext.name());
+         //  Serial.print("\t");
+         //  Serial.println(opnNext.size(), DEC);
+           opnNext.close();
+         }
        }
+       break;
+       
+     case 's':  //send data from specified file
+         getFileName();
+         if (SD.exists(FileName)){
+          rdFile = SD.open(FileName);
+          while (rdFile.peek() !=-1){
+            Serial.write(rdFile.read());  
+            }
+          rdFile.close();
+          Serial.println();
+         }
         else{
-         i = 3;
-         j = 5;
-       }
-     }
-   }
-   if(Serial.available() == 0){
-     return(0);
-   }
-   rec = Serial.read();
-   if(rec == ykok){
-     k = 3; 
-   }
-  }
-  Serial.print("ykok");    //jos pääsee tähän, yhteys on kuosissa
-  return(1);
-  
-}
-
-int SendLoop(){
-  dataFile = SD.open("test.txt");
-  dataFile.seek(location);
-  while (dataFile.peek() != -1){
-    SendData();
-    if (SendData() == 0){
-      dataFile.close();
-      return(0);
+          Serial.println("Fug");
+        }
+        break;
+        
+     case 'r':  //remove specified file
+         getFileName();
+         if (SD.exists(FileName)){
+           SD.remove(FileName);
+           Serial.println("d");
+         }
+         else{
+           Serial.println("Fug");
+         }
+         break;
+         
+     default:
+         Serial.println("wut");
+         break;
     }
+    
   }
-  dataFile.close();
-  return(1);
-}
   
-
-int SendData(){    //lähettää seuraavan rivin tallennettua ei-lähetettyä dataa
-  String rec = "";    //jos ok, niin palauttaa 1 ja siirtää lukukohdan seuraavalle riville
-  String ok = "ok";
-  //dataFile = SD.open("test.txt");   avattu jo SendLoopissa
-  dataFile.seek(location);
-  while (dataFile.peek() != "/n"){
-    Serial.write(dataFile.read());
-  }
-  Serial.write("/n");
-  while (Serial.available() == 0){
-  }
-  delay(20);
-  rec = Serial.read();
-  if (rec == ok){
-  location = (dataFile.position() + 1); //+1, koska ei missään vaiheessa lukenut rivinvaihtoa
-  //dataFile.close();
-  return(1);
-  }
-  //dataFile.close(); sulkeutuu SendLoopissa
-  return(0);
 }
+
+void getFileName(){
+  snprintf(FileName, sizeof(FileName), "%c%c%c%c.txt", CharData[1], CharData[2], CharData[3], CharData[4]);
+}  
+
