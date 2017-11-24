@@ -12,11 +12,12 @@ DHT dht(DHTPIN, DHTTYPE);
 
 SFE_BMP180 pressure;  //paineanturi
 
+
 File myFile; //SD kortti, siihen kirjoittaminen yms.
 File rdFile;
 File opnNext;
 char FileName[10];  //Serialista löytyvän filen nimi
-char CharData[10];  //SErialista tulevan datan char
+char CharData[7];  //Serialista tulevan datan char
 
 char FileNameArray[10]; //tiedoston nimi SD korttiin
 
@@ -240,7 +241,8 @@ void SerialData(){
            break;
          }
          if (!opnNext.isDirectory()){
-           Serial.println(opnNext.name());
+           Serial.print(opnNext.name());
+           Serial.print("\n");
          //  Serial.print("\t");
          //  Serial.println(opnNext.size(), DEC);
            opnNext.close();
