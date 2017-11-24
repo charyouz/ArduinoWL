@@ -238,6 +238,7 @@ void SerialData(){
          if (! opnNext){
            Serial.println("d");
            opnNext.close();
+           rdFile.close();
            break;
          }
          if (!opnNext.isDirectory()){
@@ -246,6 +247,7 @@ void SerialData(){
          //  Serial.print("\t");
          //  Serial.println(opnNext.size(), DEC);
            opnNext.close();
+           rdFile.close();
          }
        }
        break;
