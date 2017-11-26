@@ -41,7 +41,7 @@ void setup (){
     Serial.println("PFug");
     while(1);
   }
- // Serial.print("SD");
+  Serial.print("SD");
   pinMode(10, OUTPUT);
 
   if (!SD.begin(10)){
@@ -247,7 +247,7 @@ void SerialData(){
          //  Serial.print("\t");
          //  Serial.println(opnNext.size(), DEC);
            opnNext.close();
-           rdFile.close();
+           //rdFile.close();
          }
        }
        break;
