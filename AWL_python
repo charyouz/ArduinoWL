@@ -13,17 +13,23 @@ FilePath = "/home/pi/AWL_DATA/"   #koko path minne filu menee (pitää lisätä 
 HowOldToRemove = 14 #kuinka vanha tiedosto poistetaan Arduinosta
 
 def main():
-    CurrentFile()
     global FileName
-    FileName = CurrentFile()
-    print ("Asking data about " + CurrentFile() + "...")
-    ser.write(b's' + CurrentFile().encode())
-    time.sleep(3)
-    ReadData()
-    DataToFile()
-    print('Done!')
-    global readData
-    readData = ""
+    gonnaLoop = True
+    while (gonnaLoop == True):
+        FileName = CurrentFile()
+        print ("Asking data about " + CurrentFile() + "...")
+        ser.write(b's' + CurrentFile().encode())
+        time.sleep(3)
+        ReadData()
+        if (DataToFile() == False):
+            gonnaLoop = False
+            print('All done!')
+        
+        else:
+            print('Done!')
+            
+        global readData
+        readData = ""
     return
 
 def CurrentFile():  #hakee tiedostonimen, mitä työstetään
@@ -50,10 +56,12 @@ def ReadData(): #ottaa sisääntulevan datan ja laittaan sen incData stringiin
     print("Reading data...")
     rawData = ""
     incData = ""
+    counter = 0
     while True:
         rawData = ser.read() #lukee yhden bitin
         if (rawData == b"\r"):
             rawData = ser.read()    #skippaa \r
+            counter = 0
 
         incData = rawData.decode("utf-8")
         if (incData == "d"):    #jos end char, niin pois whilesta
@@ -63,6 +71,12 @@ def ReadData(): #ottaa sisääntulevan datan ja laittaan sen incData stringiin
         if (incData == "f"):
             break
         #tähän jotain mitä tehdä, kun tiedostoa ei ole
+
+        if (incData == ";"):
+            counter += 1
+
+        if (counter >= 2 and incData == "."):
+            incData = ","   #muuttaa pisteet pilkuiksi muualla kuin päivämäärissä
 
         global readData
         readData += incData
@@ -76,7 +90,8 @@ def DataToFile():   #creates file and saves current data to it
     #global FilePath
     if (len(readData) < 20):
         print ('No data to save') #skippaa satunnaiset puolityhjät tiedostot tai
-        return                  #ser bufferissa olevat jutut
+        return False                  #ser bufferissa olevat jutut
+    
     #FilePath = "/home/pi/AWL_DATA/"
     SavePath = FilePath
     SavePath += CurrentFile()
@@ -84,7 +99,7 @@ def DataToFile():   #creates file and saves current data to it
     f = open(SavePath, 'w+')
     f.write(readData)
     f.close()
-    return
+    return True
 
 def delFromArduino():    #deletes old data from arduino
     from datetime import date, timedelta
