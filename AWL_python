@@ -1,89 +1,112 @@
 import serial
 import time
 import os
-ser = serial.Serial('/dev/ttyUSB0', 9600)
 
-ser.write(b"l")
-time.sleep(0.5)
-readData = ""   #sisältää kaiken luetun datan, troubleshoottaukseen...
-rawData = ""   #stringi, missä sisääntullut bitti binäärina
-incData = "" #stringi, missä sisääntullut data ascii
-currentFile = "" # luettavissa oleva tiedosto
-FileList = [] #lista kaikista tiedostojen nimistä ilman .txt päätteitä
-#Files = [] #luettavissa oleva tiedosto
-DataRQ = [] #mistä tiedostoista pitää pyytää dataa
-FileData = "" #vastaanotettu data tiedostoista
+ser = serial.Serial('/dev/ttyUSB0', 9600, timeout=10)
 
-i = 0
-while True:
-    ser.timeout = 2
-    rawData = ser.read() #lukee yhden bitin
-    if (rawData == b"\r"):
-        rawData = ser.read()    #skippaa \r
+#rawData = ""    #stringi luettavalle bitille binäärisenä
+#incData = ""    #stringi bitille  ei-binäärisenä
+readData = ""   #data mikä menee nykyiseen (yhteen) tiedostoon
+FileName = ""   #mikä tiedostotyön alla
+HowOldFile = 1 #kuinka monta päivää vanha file halutaan, 1= eilenjne.
+FilePath = "/home/pi/AWL_DATA/"   #koko path minne filu menee (pitää lisätä tiedostonimi
+HowOldToRemove = 14 #kuinka vanha tiedosto poistetaan Arduinosta
 
-    incData = rawData.decode("utf-8")
-    if (i < 4):
-        currentFile += incData   #ottaa ylös vain tiedoston nimen ilman päätettä
-        i += 1
-        
-    if (incData == "d"):    #jos end char, niin pois whilesta
-        i = 0
-        break
+def main():
+    CurrentFile()
+    global FileName
+    FileName = CurrentFile()
+    print ("Asking data about " + CurrentFile() + "...")
+    ser.write(b's' + CurrentFile().encode())
+    time.sleep(3)
+    ReadData()
+    DataToFile()
+    print('Done!')
+    global readData
+    readData = ""
+    return
 
-    if (incData == "\n"):   #rivinvaihto = uusi tiedostonimi tulossa
-        FileList.append(currentFile)
-        currentFile = ""
-        i = 0
-
-    readData += incData
-    #print(incData)
-
-print(readData)
-#time.sleep(1)
-print(FileList)
-time.sleep(1)
-print("Number of files: ", len(FileList))
-#TÄHÄN ASTI TOIMII HYVIN
-
-#vertaa onko mikään tiedosto uusi
-
-i = 0
-while (i < len(FileList)):
-    FilePath = "C:/home/pi/AWL_Data/"
-    FilePath += FileList[i]
-    FilePath += ".txt"
-    print(FilePath)
-    if (os.path.exists(FilePath) == False):
-        DataRQ.append(FileList[i])
-
-    i += 1
-    
-i = 0
-print("Data ei ole tiedostoista: ", DataRQ)
-
-while(i < len(DataRQ)):
-    FileData = ""
-    ser.write(b's')
-    ser.write(b'DataRQ[i]')
-    print("Waiting for arduino to send data from", DataRQ[i], ".txt")
-    time.sleep(10)
-    print("Reading data....")
-    while True:
-        
-        rawData = ser.read()
-        if (rawData == b"\r"):
-            rawData = ser.read()
-            
-        incData = rawData.decode("utf-8")
-        if (rawData == "d"):
+def CurrentFile():  #hakee tiedostonimen, mitä työstetään
+    from datetime import date, timedelta
+    Age = HowOldFile    #miten tämä niin, että Age muuttuu jos while loopissa..
+    IsNewFile = False
+    while (IsNewFile == False):
+        Path = FilePath
+        Date = date.today() - timedelta(Age)
+        wantedDate = Date.strftime('%m%d')
+        Path += wantedDate
+        #Path += '.txt'
+        if (os.path.isfile(Path) == False):
+            IsNewFile = True
             break
 
-        FileData += incData
-
-    print("Data from ", DataRQ[i], " :", FileData)
-    i =+ 30
+        else:
+            Age += 1
     
+    return wantedDate
 
-if (len(FileList) > 14):
-    pass
+def ReadData(): #ottaa sisääntulevan datan ja laittaan sen incData stringiin
+    i = 0       #toimii!!
+    print("Reading data...")
+    rawData = ""
+    incData = ""
+    while True:
+        rawData = ser.read() #lukee yhden bitin
+        if (rawData == b"\r"):
+            rawData = ser.read()    #skippaa \r
+
+        incData = rawData.decode("utf-8")
+        if (incData == "d"):    #jos end char, niin pois whilesta
+            i = 0
+            break
+
+        if (incData == "f"):
+            break
+        #tähän jotain mitä tehdä, kun tiedostoa ei ole
+
+        global readData
+        readData += incData
+        #readData.append(incData)
+        #print(incData)
+
+    return readData
+
+def DataToFile():   #creates file and saves current data to it
+    #global FileName #toimii
+    #global FilePath
+    if (len(readData) < 20):
+        print ('No data to save') #skippaa satunnaiset puolityhjät tiedostot tai
+        return                  #ser bufferissa olevat jutut
+    #FilePath = "/home/pi/AWL_DATA/"
+    SavePath = FilePath
+    SavePath += CurrentFile()
+    print ("Saving data from ", FileName, " to file")
+    f = open(SavePath, 'w+')
+    f.write(readData)
+    f.close()
+    return
+
+def delFromArduino():    #deletes old data from arduino
+    from datetime import date, timedelta
+    Remove = HowOldToRemove
+    while (Remove >= HowOldToRemove):
+        Date = date.today() - timedelta(Remove)
+        FileToDel = Date.strftime('%m%d')
+        ser.write(b'r' + FileToDel.encode())
+        Data = ser.read()
+        if (Data == b'd'):
+            print('Removed file ' + Date.strftime('%m%d'))
+            Remove += 1
+    
+        if (Data == b'f'):
+            print('Removed all old files!')
+            Remove = HowOldToRemove - 1
+            break
+
+        else:
+            print('Different answer than expected')
+            break
+
+
+    return
     
