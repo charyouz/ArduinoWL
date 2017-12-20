@@ -36,16 +36,18 @@ void setup (){
   pinMode(2, INPUT);
 
   if (pressure.begin())
-    Serial.println("P");
+    delay(1);
+    //Serial.println("P");
   else {
-    Serial.println("PFug");
+    //Serial.println("PFug");
     while(1);
   }
-  Serial.print("SD");
+  Serial.print("S0");
   pinMode(10, OUTPUT);
 
   if (!SD.begin(10)){
-    Serial.println("Fug");
+    delay(1);
+    //Serial.println("Fug");
   }
   else{
 //  Serial.println("done!");
@@ -55,7 +57,7 @@ void setup (){
   
   dht.begin();
   
-  Serial.println("d");
+  //Serial.println("finish");
   
  /* 
   RTC.h = 20; //uncomment to set time if needed
@@ -77,15 +79,15 @@ void loop(){
   double T,P,p0,a;
   
 
-  Serial.println();
-  Serial.println("Meas");
+  //Serial.println();
+  //Serial.println("Meas");
 
   RTC.readTime();
 
   float h = dht.readHumidity();
   
 //  Serial.print("Humidity: ");
-  Serial.println(h);
+  //Serial.println(h);
 
   status = pressure.startTemperature();
   if (status != 0)
@@ -96,8 +98,9 @@ void loop(){
     if (status != 0)
     {
      // Serial.print("Temperature: ");
-      Serial.print(T,2);
+      //Serial.print(T,2);
       //Serial.println("C");
+      delay(1);
       
       status = pressure.startPressure(3);
       if (status != 0)
@@ -111,7 +114,7 @@ void loop(){
         {
           p0 = pressure.sealevel(P,ALTITUDE);
      //     Serial.print("Pressure: ");
-          Serial.print(p0,2);
+      //    Serial.print(p0,2);
      //     Serial.println(" mb");
          
         }
@@ -125,7 +128,7 @@ void loop(){
 
   myFile = SD.open(FileNameArray, FILE_WRITE);
   if (myFile){
-    Serial.print("Writing");
+   // Serial.print("Writing");
   //  myFile.print(i);    //printtaa mittauskerran
   //  myFile.print(";");
 
@@ -151,15 +154,15 @@ void loop(){
     myFile.println();
     myFile.close();
 
-    Serial.println("d");
+   // Serial.println("writ");
     
    // Serial.print("Measured at ");
-   // Serial.print("Measured ");
+    Serial.print("Measure ");
    // Serial.print(i);
    // Serial.print(" times at ");
-  //  Serial.print(RTC.h);
+    Serial.print(RTC.h);
   //  Serial.print(":");
-  //  Serial.print(RTC.m);
+    Serial.println(RTC.m);
   //  Serial.print(" o'clock ");
   //  Serial.print(RTC.dd);
   //  Serial.print(".");
@@ -168,7 +171,7 @@ void loop(){
   //  Serial.println(RTC.yyyy);
   }
   else{
-    Serial.println("FWrit");
+    Serial.println("ERROR Writing");
   }
 
   //Serial.println("Waiting 2 seconds");
@@ -211,13 +214,14 @@ void setalarm(){
   RTC.readAlarm2();
   //Serial.print(RTC.h);
  // Serial.print(":");
-  Serial.println(RTC.m);
+  //Serial.println(RTC.m);
   
 
 
 }
 
 void SerialData(){
+ // int a =0;
   if (Serial.available() != 0){
     delay(300);
     int j = 0;
@@ -237,7 +241,7 @@ void SerialData(){
          opnNext = rdFile.openNextFile();
          if (! opnNext){
            Serial.println("d");
-           opnNext.close();
+           opnNext.close();  
            rdFile.close();
            break;
          }
@@ -260,10 +264,11 @@ void SerialData(){
             Serial.write(rdFile.read());  
             }
           rdFile.close();
-          Serial.println();
+          //Serial.println();
+          Serial.print("d");
          }
         else{
-          Serial.println("Fug");
+          Serial.print("f");
         }
         break;
         
@@ -271,15 +276,15 @@ void SerialData(){
          getFileName();
          if (SD.exists(FileName)){
            SD.remove(FileName);
-           Serial.println("d");
+           Serial.print("d");
          }
          else{
-           Serial.println("Fug");
+           Serial.print("f");
          }
          break;
          
      default:
-         Serial.println("wut");
+         Serial.print("qd");
          break;
     }
     
