@@ -14,6 +14,7 @@ HowOldToRemove = 14 #kuinka vanha tiedosto poistetaan Arduinosta
 
 def main():
     global FileName
+    global gonnaLoop
     gonnaLoop = True
     while (gonnaLoop == True):
         FileName = CurrentFile()
@@ -21,20 +22,22 @@ def main():
         ser.write(b's' + CurrentFile().encode())
         time.sleep(3)
         ReadData()
-        if (DataToFile() == False):
-            gonnaLoop = False
+        if (gonnaLoop == False):
             print('All done!')
         
         else:
-            print('Done!')
+            DataToFile()
+            print('Done!' + '\n')
             
         global readData
         readData = ""
+
+    #delFromArduino()        
     return
 
 def CurrentFile():  #hakee tiedostonimen, mitä työstetään
     from datetime import date, timedelta
-    Age = HowOldFile    #miten tämä niin, että Age muuttuu jos while loopissa..
+    Age = HowOldFile    
     IsNewFile = False
     while (IsNewFile == False):
         Path = FilePath
@@ -69,8 +72,9 @@ def ReadData(): #ottaa sisääntulevan datan ja laittaan sen incData stringiin
             break
 
         if (incData == "f"):
+            global gonnaLoop
+            gonnaLoop = False
             break
-        #tähän jotain mitä tehdä, kun tiedostoa ei ole
 
         if (incData == ";"):
             counter += 1
