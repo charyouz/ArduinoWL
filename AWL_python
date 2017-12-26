@@ -4,13 +4,11 @@ import os
 
 ser = serial.Serial('/dev/ttyUSB0', 9600, timeout=10)
 
-#rawData = ""    #stringi luettavalle bitille binäärisenä
-#incData = ""    #stringi bitille  ei-binäärisenä
-readData = ""   #data mikä menee nykyiseen (yhteen) tiedostoon
-FileName = ""   #mikä tiedostotyön alla
-HowOldFile = 1 #kuinka monta päivää vanha file halutaan, 1= eilenjne.
-FilePath = "/home/pi/AWL_DATA/"   #koko path minne filu menee (pitää lisätä tiedostonimi
-HowOldToRemove = 14 #kuinka vanha tiedosto poistetaan Arduinosta
+readData = ""   #data that goes to one (current) file
+FileName = ""   #what file is being worked on right now
+HowOldFile = 1 #how old files to get from (1=yesterday etc.) goes from there until there are none left
+FilePath = "/home/pi/AWL_DATA/"   #the path where to save files
+HowOldToRemove = 14 #how old files to remove from arduino (days). doesn't work if files are not continuous
 
 def main():
     global FileName
@@ -23,7 +21,7 @@ def main():
         time.sleep(3)
         ReadData()
         if (gonnaLoop == False):
-            print('All done!')
+            print('All done!' + '\n')
         
         else:
             DataToFile()
@@ -32,10 +30,10 @@ def main():
         global readData
         readData = ""
 
-    #delFromArduino()        
+    delFromArduino()        
     return
 
-def CurrentFile():  #hakee tiedostonimen, mitä työstetään
+def CurrentFile():  #fetches filename that is being used atm
     from datetime import date, timedelta
     Age = HowOldFile    
     IsNewFile = False
@@ -54,49 +52,46 @@ def CurrentFile():  #hakee tiedostonimen, mitä työstetään
     
     return wantedDate
 
-def ReadData(): #ottaa sisääntulevan datan ja laittaan sen incData stringiin
-    i = 0       #toimii!!
+def ReadData(): #takes the incoming data and puts it to the incData string
+    i = 0       
     print("Reading data...")
     rawData = ""
     incData = ""
     counter = 0
     while True:
-        rawData = ser.read() #lukee yhden bitin
+        rawData = ser.read() #reads one bit
         if (rawData == b"\r"):
-            rawData = ser.read()    #skippaa \r
+            rawData = ser.read()    #skip \r
             counter = 0
 
         incData = rawData.decode("utf-8")
-        if (incData == "d"):    #jos end char, niin pois whilesta
+        if (incData == "d"):    #if end char, break from while
             i = 0
             break
 
         if (incData == "f"):
             global gonnaLoop
             gonnaLoop = False
+            print('No data found')
             break
 
         if (incData == ";"):
             counter += 1
 
         if (counter >= 2 and incData == "."):
-            incData = ","   #muuttaa pisteet pilkuiksi muualla kuin päivämäärissä
+            incData = ","   #changes perioids to commas in the data
 
         global readData
         readData += incData
-        #readData.append(incData)
-        #print(incData)
+        
 
     return readData
 
 def DataToFile():   #creates file and saves current data to it
-    #global FileName #toimii
-    #global FilePath
     if (len(readData) < 20):
-        print ('No data to save') #skippaa satunnaiset puolityhjät tiedostot tai
-        return False                  #ser bufferissa olevat jutut
+        print ('No data to save') #skips random half empty files and
+        return False                  #anything left in the ser buffer
     
-    #FilePath = "/home/pi/AWL_DATA/"
     SavePath = FilePath
     SavePath += CurrentFile()
     print ("Saving data from ", FileName, " to file")
@@ -108,6 +103,7 @@ def DataToFile():   #creates file and saves current data to it
 def delFromArduino():    #deletes old data from arduino
     from datetime import date, timedelta
     Remove = HowOldToRemove
+    print('Removing old files...')
     while (Remove >= HowOldToRemove):
         Date = date.today() - timedelta(Remove)
         FileToDel = Date.strftime('%m%d')
@@ -117,8 +113,13 @@ def delFromArduino():    #deletes old data from arduino
             print('Removed file ' + Date.strftime('%m%d'))
             Remove += 1
     
-        if (Data == b'f'):
-            print('Removed all old files!')
+        elif (Data == b'f'):
+            if (Remove == HowOldToRemove):
+                print('No files older than' , HowOldToRemove , 'days to remove')
+
+            else:
+                print('Removed all files older than' , HowOldToRemove , 'days')
+                
             Remove = HowOldToRemove - 1
             break
 
@@ -127,5 +128,6 @@ def delFromArduino():    #deletes old data from arduino
             break
 
 
+    print('\n')
     return
     
